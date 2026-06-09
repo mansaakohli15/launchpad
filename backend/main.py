@@ -3,17 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List
-import tempfile, os, json, io
+import os, json, io, re
 from groq import Groq
 from dotenv import load_dotenv
 import fitz
-
-from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, SystemMessage
 
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -21,20 +15,25 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://launchpad-ai.vercel.app",
+        os.getenv("FRONTEND_URL", ""),
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-vector_store_cache = {}
+# In-memory document store (lightweight RAG)
+doc_store: dict = {}
 
-# ── HEALTH ───────────────────────────────────────────────
+# ── HEALTH ────────────────────────────────────────────────
 @app.get("/")
 def root():
-    return {"status": "AI Career Copilot API running"}
+    return {"status": "Launchpad API running"}
 
 
-# ── RESUME UTILS ─────────────────────────────────────────
+# ── PDF UTILS ─────────────────────────────────────────────
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     return "".join(page.get_text() for page in doc)
@@ -113,20 +112,15 @@ FINAL_VERDICT:
 async def optimize_resume(file: UploadFile = File(...), job_description: str = Form(...)):
     file_bytes = await file.read()
     resume_text = extract_text_from_pdf(file_bytes)
-
     prompt = f"""You are an expert ATS resume writer.
-
-I will give you a resume and a job description.
-Your job is to REWRITE the resume to maximize ATS score for this specific job.
+Rewrite this resume to maximize ATS score for the job description below.
 
 Rules:
 - Keep all real experience, education, and projects — do not invent anything
 - Rewrite bullet points to use keywords from the job description naturally
-- Add missing relevant keywords where they genuinely apply
 - Make bullet points start with strong action verbs
-- Add measurable impact where possible (e.g. "improved X by Y%")
-- Keep the same sections and structure
-- Make it ATS-friendly: no tables, no columns, no graphics
+- Add measurable impact where possible
+- Make it ATS-friendly: no tables, no columns
 
 ORIGINAL RESUME:
 {resume_text}
@@ -134,30 +128,29 @@ ORIGINAL RESUME:
 JOB DESCRIPTION:
 {job_description}
 
-Return ONLY the optimized resume text. No explanations, no commentary.
-Use this exact structure:
+Return ONLY the optimized resume text. No explanations.
+Use this structure:
 
 [FULL NAME]
 [Email] | [Phone] | [LinkedIn/GitHub]
 
 SUMMARY
-[2-3 sentence professional summary with JD keywords]
+[2-3 sentence summary with JD keywords]
 
 SKILLS
-[Comma separated skills list including JD keywords]
+[Comma separated skills]
 
 EXPERIENCE
 [Company] | [Role] | [Dates]
-- [Rewritten bullet with action verb and impact]
-- [Rewritten bullet with JD keywords]
+- [Rewritten bullet]
 
 EDUCATION
 [Degree] | [University] | [Year]
 
 PROJECTS
 [Project Name] | [Tech Stack]
-- [Description with relevant keywords]
-"""
+- [Description]"""
+
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}]
@@ -169,57 +162,40 @@ PROJECTS
         from reportlab.lib.styles import ParagraphStyle
         from reportlab.lib.units import cm
         from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-        from reportlab.lib.enums import TA_LEFT
 
         buffer = io.BytesIO()
-        doc = SimpleDocTemplate(
-            buffer, pagesize=A4,
-            rightMargin=2*cm, leftMargin=2*cm,
-            topMargin=2*cm, bottomMargin=2*cm
-        )
+        doc = SimpleDocTemplate(buffer, pagesize=A4,
+            rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
 
         normal = ParagraphStyle('normal', fontName='Helvetica', fontSize=10, leading=15, spaceAfter=3)
-        heading = ParagraphStyle('heading', fontName='Helvetica-Bold', fontSize=12, leading=16, spaceAfter=4, spaceBefore=10, borderPad=2)
+        heading = ParagraphStyle('heading', fontName='Helvetica-Bold', fontSize=12, leading=16, spaceAfter=4, spaceBefore=10)
         name_style = ParagraphStyle('name', fontName='Helvetica-Bold', fontSize=16, leading=22, spaceAfter=2)
-        contact_style = ParagraphStyle('contact', fontName='Helvetica', fontSize=9, leading=14, spaceAfter=8, textColor='grey')
 
         story = []
-        lines = optimized_text.split('\n')
         is_first = True
-
-        for line in lines:
-            line_stripped = line.strip()
-            if not line_stripped:
+        for line in optimized_text.split('\n'):
+            line = line.strip()
+            if not line:
                 story.append(Spacer(1, 5))
                 continue
             if is_first:
-                story.append(Paragraph(line_stripped, name_style))
+                story.append(Paragraph(line, name_style))
                 is_first = False
-            elif '|' in line_stripped and len(line_stripped) < 80 and story and len(story) <= 3:
-                story.append(Paragraph(line_stripped, contact_style))
-            elif line_stripped.isupper() and len(line_stripped) < 30:
-                story.append(Spacer(1, 6))
-                story.append(Paragraph(f'<u>{line_stripped}</u>', heading))
-            elif line_stripped.startswith('- '):
-                story.append(Paragraph(f"&bull;&nbsp;&nbsp;{line_stripped[2:]}", normal))
+            elif line.isupper() and len(line) < 30:
+                story.append(Paragraph(f'<u>{line}</u>', heading))
+            elif line.startswith('- '):
+                story.append(Paragraph(f"• {line[2:]}", normal))
             else:
-                story.append(Paragraph(line_stripped, normal))
+                story.append(Paragraph(line, normal))
 
         doc.build(story)
         buffer.seek(0)
-
-        return StreamingResponse(
-            buffer,
-            media_type="application/pdf",
-            headers={"Content-Disposition": "attachment; filename=optimized_resume.pdf"}
-        )
-
+        return StreamingResponse(buffer, media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=optimized_resume.pdf"})
     except ImportError:
-        return StreamingResponse(
-            io.BytesIO(optimized_text.encode()),
+        return StreamingResponse(io.BytesIO(optimized_text.encode()),
             media_type="text/plain",
-            headers={"Content-Disposition": "attachment; filename=optimized_resume.txt"}
-        )
+            headers={"Content-Disposition": "attachment; filename=optimized_resume.txt"})
 
 
 # ── INTERVIEW ─────────────────────────────────────────────
@@ -253,7 +229,7 @@ def parse_evaluation(evaluation: str) -> dict:
 
 @app.post("/api/interview/question")
 async def get_question(req: QuestionRequest):
-    messages = [{"role": "system", "content": f"You are a strict but fair technical interviewer for a {req.role} position. Ask ONE interview question at a time. Questions should progress from basic to advanced. You are on question {req.question_num} of 5."}]
+    messages = [{"role": "system", "content": f"You are a strict but fair technical interviewer for a {req.role} position. Ask ONE interview question at a time. Progress from basic to advanced. You are on question {req.question_num} of 5."}]
     for m in req.history:
         messages.append({"role": m.role, "content": m.content})
     messages.append({"role": "user", "content": "Ask the next interview question."})
@@ -285,43 +261,62 @@ IDEAL_ANSWER_HINT:
     return parse_evaluation(response.choices[0].message.content)
 
 
-# ── RAG ASSISTANT ─────────────────────────────────────────
+# ── RAG ASSISTANT (lightweight — no torch) ────────────────
+def simple_chunk_text(text: str, chunk_size: int = 400) -> list:
+    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=40)
+    return splitter.split_text(text)
+
+def keyword_search(query: str, docs: list, k: int = 4) -> list:
+    query_words = set(re.findall(r'\w+', query.lower()))
+    scores = []
+    for i, doc in enumerate(docs):
+        doc_words = set(re.findall(r'\w+', doc.lower()))
+        overlap = len(query_words & doc_words)
+        scores.append((i, overlap))
+    scores.sort(key=lambda x: x[1], reverse=True)
+    return [docs[i] for i, _ in scores[:k] if _ > 0]
+
 class ChatRequest(BaseModel):
     session_id: str
     question: str
 
 @app.post("/api/assistant/upload")
 async def upload_documents(files: List[UploadFile] = File(...), session_id: str = Form(...)):
-    docs = []
+    all_chunks = []
+    file_count = 0
     for uploaded_file in files:
         file_bytes = await uploaded_file.read()
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-            tmp.write(file_bytes)
-            tmp_path = tmp.name
-        loader = PyMuPDFLoader(tmp_path)
-        docs.extend(loader.load())
-        os.unlink(tmp_path)
-
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    chunks = splitter.split_documents(docs)
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-    vector_store_cache[session_id] = Chroma.from_documents(chunks, embeddings)
-    return {"status": "ok", "chunks": len(chunks), "files": len(files)}
+        text = extract_text_from_pdf(file_bytes)
+        chunks = simple_chunk_text(text)
+        all_chunks.extend(chunks)
+        file_count += 1
+    doc_store[session_id] = all_chunks
+    return {"status": "ok", "chunks": len(all_chunks), "files": file_count}
 
 @app.post("/api/assistant/chat")
 async def chat_with_docs(req: ChatRequest):
-    if req.session_id not in vector_store_cache:
+    if req.session_id not in doc_store or not doc_store[req.session_id]:
         return {"answer": "No documents found. Please upload your study materials first."}
-    vs = vector_store_cache[req.session_id]
-    docs = vs.similarity_search(req.question, k=3)
-    context = "\n\n".join([d.page_content for d in docs])
-    llm = ChatGroq(api_key=os.getenv("GROQ_API_KEY"), model_name="llama-3.3-70b-versatile")
-    messages = [
-        SystemMessage(content="You are a helpful study assistant. Answer the user's question using ONLY the provided context from their uploaded documents. If the answer isn't in the context, say so honestly."),
-        HumanMessage(content=f"Context from uploaded documents:\n{context}\n\nQuestion: {req.question}")
-    ]
-    response = llm.invoke(messages)
-    return {"answer": response.content}
+
+    relevant = keyword_search(req.question, doc_store[req.session_id], k=4)
+    if not relevant:
+        relevant = doc_store[req.session_id][:3]
+
+    context = "\n\n".join(relevant)
+    prompt = f"""You are a helpful study assistant. Answer using ONLY the context below from the user's uploaded documents. If the answer isn't in the context, say so.
+
+Context:
+{context}
+
+Question: {req.question}
+
+Answer:"""
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return {"answer": response.choices[0].message.content}
 
 
 # ── ROADMAP ───────────────────────────────────────────────
