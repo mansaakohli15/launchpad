@@ -81,7 +81,7 @@ GROQ_API_KEY=your_groq_api_key_here
 Start backend:
 ```bash
 uvicorn main:app --reload
-# Running on http://localhost:8000
+# Running on ${process.env.NEXT_PUBLIC_API_URL}
 ```
 
 ### Frontend Setup

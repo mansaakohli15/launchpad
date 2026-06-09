@@ -39,7 +39,7 @@ export default function RoadmapPage() {
     if (!skills.trim()) { setError("Please enter your current skills."); return; }
     setLoading(true); setError(""); setRoadmap(null);
     try {
-      const res = await fetch("http://localhost:8000/api/roadmap", {
+      const res = await fetch("${process.env.NEXT_PUBLIC_API_URL}/api/roadmap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ goal, timeframe, current_skills: skills }),

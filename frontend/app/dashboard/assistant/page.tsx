@@ -34,7 +34,7 @@ export default function AssistantPage() {
       const formData = new FormData();
       files.forEach(f => formData.append("files", f));
       formData.append("session_id", SESSION_ID);
-      const res = await fetch("http://localhost:8000/api/assistant/upload", {
+      const res = await fetch("${process.env.NEXT_PUBLIC_API_URL}/api/assistant/upload", {
         method: "POST", body: formData,
       });
       const data = await res.json();
@@ -55,7 +55,7 @@ export default function AssistantPage() {
     setMessages(prev => [...prev, { role: "user", content: q }]);
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/assistant/chat", {
+      const res = await fetch("${process.env.NEXT_PUBLIC_API_URL}/api/assistant/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: SESSION_ID, question: q }),
