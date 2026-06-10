@@ -325,7 +325,7 @@ class RoadmapRequest(BaseModel):
     timeframe: str
     current_skills: str
 
-@app.post("/api/roadmap")
+@app.post("/api/roadmap)
 async def generate_roadmap(req: RoadmapRequest):
     prompt = f"""You are an expert career coach. Generate a personalized learning roadmap.
 
