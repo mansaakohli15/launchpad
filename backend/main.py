@@ -17,14 +17,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
+        "https://launchpad-2rnq8elae-mansaa-kohlis-projects.vercel.app",
         "https://launchpad-production-2461.up.railway.app",
-        "https://launchpad-ai.vercel.app",
         os.getenv("FRONTEND_URL", ""),
     ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # In-memory document store (lightweight RAG)
 doc_store: dict = {}
 
