@@ -51,7 +51,7 @@ export default function ResumePage() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("job_description", jd);
-      const res = await fetch("${process.env.NEXT_PUBLIC_API_URL}/api/analyze-resume", { method: "POST", body: formData });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze-resume", { method: "POST", body: formData });
       if (!res.ok) throw new Error();
       setResult(await res.json());
     } catch {
@@ -67,7 +67,7 @@ export default function ResumePage() {
       const formData = new FormData();
       formData.append("file", optFile);
       formData.append("job_description", optJd);
-      const res = await fetch("${process.env.NEXT_PUBLIC_API_URL}/api/optimize-resume", { method: "POST", body: formData });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/optimize-resume", { method: "POST", body: formData });
       if (!res.ok) throw new Error();
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);

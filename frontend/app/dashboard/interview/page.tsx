@@ -91,7 +91,7 @@ export default function InterviewPage() {
     setQNum(1);
     setEvaluation(null);
     try {
-      const res = await fetch("${process.env.NEXT_PUBLIC_API_URL}/api/interview/question", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/interview/question", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role, question_num: 1, history: [] }),
@@ -117,7 +117,7 @@ export default function InterviewPage() {
     setAnswer("");
 
     try {
-      const evalRes = await fetch("${process.env.NEXT_PUBLIC_API_URL}/api/interview/evaluate", {
+      const evalRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/interview/evaluate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role, question: currentQ, answer }),
@@ -130,7 +130,7 @@ export default function InterviewPage() {
 
       if (qNum < TOTAL_QUESTIONS) {
         const nextQ = qNum + 1;
-        const qRes = await fetch("${process.env.NEXT_PUBLIC_API_URL}/api/interview/question", {
+        const qRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/interview/question", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ role, question_num: nextQ, history: newHistory }),
