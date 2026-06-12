@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { RoadAnimation } from "./RoadAnimation";
+import { API_URL } from "../../config";
 
 const GOALS = [
   "Software Engineering Internship",
@@ -39,7 +40,7 @@ export default function RoadmapPage() {
     if (!skills.trim()) { setError("Please enter your current skills."); return; }
     setLoading(true); setError(""); setRoadmap(null);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/roadmap`, {
+      const res = await fetch(API_URL + "/api/roadmap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ goal, timeframe, current_skills: skills }),
@@ -110,7 +111,6 @@ export default function RoadmapPage() {
         .week-nav-btn.next { background:rgba(167,139,250,0.08); border-color:rgba(167,139,250,0.25); color:#A78BFA; }
       `}</style>
 
-      {/* Header */}
       <div className="fade" style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: "clamp(22px,4vw,32px)", fontWeight: 800, letterSpacing: "-0.02em" }}>
           Learning <span style={{ color: "#A78BFA" }}>Roadmap</span>
@@ -120,7 +120,6 @@ export default function RoadmapPage() {
         </p>
       </div>
 
-      {/* Setup form */}
       {!roadmap && (
         <div className="fade2">
           <div className="card" style={{ marginBottom: 2 }}>
@@ -167,11 +166,9 @@ export default function RoadmapPage() {
         </div>
       )}
 
-      {/* Roadmap result */}
       {roadmap && (
         <div className="fade3">
 
-          {/* Road animation card */}
           <div className="card" style={{ marginBottom: 2 }}>
             <div className="card-label" style={{ color:"#A78BFA" }}>🛣️ Your Learning Journey</div>
             <p style={{ fontSize:12, color:"rgba(232,228,220,0.4)", marginBottom:16 }}>
@@ -184,7 +181,6 @@ export default function RoadmapPage() {
               active={activeWeek}
             />
 
-            {/* Active week detail */}
             {roadmap.weekly_plan[activeWeek] && (
               <div className="slide" key={activeWeek}
                 style={{ marginTop:24, paddingTop:20, borderTop:"1px solid #1A2320" }}>
@@ -218,7 +214,6 @@ export default function RoadmapPage() {
             )}
           </div>
 
-          {/* Must learn + Projects */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:2, marginBottom:2 }}>
             <div className="card">
               <div className="card-label" style={{ color:"rgba(232,228,220,0.35)" }}>🎯 Must Learn</div>
@@ -244,7 +239,6 @@ export default function RoadmapPage() {
             </div>
           </div>
 
-          {/* Resources */}
           <div className="card" style={{ marginBottom:2 }}>
             <div className="card-label" style={{ color:"rgba(232,228,220,0.35)" }}>📖 Recommended Resources</div>
             {roadmap.resources.map((r,i) => (
@@ -263,7 +257,6 @@ export default function RoadmapPage() {
             ))}
           </div>
 
-          {/* Final tip */}
           <div style={{ background:"rgba(167,139,250,0.06)", border:"1px solid rgba(167,139,250,0.2)", padding:"20px 24px", marginBottom:2, display:"flex", gap:12, alignItems:"flex-start" }}>
             <span style={{ fontSize:18, flexShrink:0 }}>💜</span>
             <p style={{ fontSize:14, color:"rgba(232,228,220,0.78)", lineHeight:1.75, fontStyle:"italic" }}>

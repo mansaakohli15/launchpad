@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
+import { API_URL } from "../../config";
 
 type AnalysisResult = {
   match_score: number;
@@ -15,7 +16,6 @@ type Tab = "analyze" | "optimize";
 export default function ResumePage() {
   const [tab, setTab] = useState<Tab>("analyze");
 
-  // Analyze state
   const [file, setFile] = useState<File | null>(null);
   const [jd, setJd] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,6 @@ export default function ResumePage() {
   const [drag, setDrag] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Optimize state
   const [optFile, setOptFile] = useState<File | null>(null);
   const [optJd, setOptJd] = useState("");
   const [optLoading, setOptLoading] = useState(false);
@@ -51,7 +50,7 @@ export default function ResumePage() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("job_description", jd);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze-resume", { method: "POST", body: formData });
+      const res = await fetch(API_URL + "/api/analyze-resume", { method: "POST", body: formData });
       if (!res.ok) throw new Error();
       setResult(await res.json());
     } catch {
@@ -67,7 +66,7 @@ export default function ResumePage() {
       const formData = new FormData();
       formData.append("file", optFile);
       formData.append("job_description", optJd);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/optimize-resume", { method: "POST", body: formData });
+      const res = await fetch(API_URL + "/api/optimize-resume", { method: "POST", body: formData });
       if (!res.ok) throw new Error();
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
@@ -161,7 +160,6 @@ export default function ResumePage() {
         textarea::placeholder { color:rgba(232,228,220,0.25); }
       `}</style>
 
-      {/* Header */}
       <div className="fade" style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: "clamp(22px,4vw,32px)", fontWeight: 800, letterSpacing: "-0.02em" }}>
           Resume <span style={{ color: "#00FF94" }}>Tools</span>
@@ -171,7 +169,6 @@ export default function ResumePage() {
         </p>
       </div>
 
-      {/* Tabs */}
       <div className="fade" style={{ display: "flex", gap: 2, marginBottom: 24 }}>
         <button className={`tab-btn ${tab === "analyze" ? "active" : ""}`} onClick={() => setTab("analyze")}>
           📄 Analyze Resume
@@ -181,7 +178,6 @@ export default function ResumePage() {
         </button>
       </div>
 
-      {/* ANALYZE TAB */}
       {tab === "analyze" && (
         <div className="fade2">
           {!result ? (
@@ -278,7 +274,6 @@ export default function ResumePage() {
         </div>
       )}
 
-      {/* OPTIMIZE TAB */}
       {tab === "optimize" && (
         <div className="fade2">
           <div style={{ background:"rgba(167,139,250,0.06)",border:"1px solid rgba(167,139,250,0.2)",padding:"16px 20px",marginBottom:16,display:"flex",gap:12,alignItems:"flex-start" }}>
@@ -286,7 +281,7 @@ export default function ResumePage() {
             <div>
               <div style={{ fontSize:14,fontWeight:700,color:"#A78BFA",marginBottom:4 }}>AI Resume Optimizer</div>
               <p style={{ fontSize:13,color:"rgba(232,228,220,0.6)",lineHeight:1.7 }}>
-                Upload your resume + paste a job description. Our AI rewrites your resume to maximize ATS score — adding missing keywords, strengthening bullet points, and adding measurable impact. Downloads as a clean PDF ready to submit.
+                Upload your resume + paste a job description. Our AI rewrites your resume to maximize ATS score. Downloads as a clean PDF.
               </p>
             </div>
           </div>
@@ -324,7 +319,7 @@ export default function ResumePage() {
               <div style={{ background:"rgba(255,209,102,0.04)",border:"1px solid rgba(255,209,102,0.12)",padding:"12px 16px",marginBottom:2,display:"flex",gap:10 }}>
                 <span style={{ fontSize:14 }}>⚡</span>
                 <p style={{ fontSize:12,color:"rgba(232,228,220,0.55)",lineHeight:1.6 }}>
-                  <span style={{ color:"#E8E4DC",fontWeight:600 }}>Note:</span> The AI rewrites your bullet points to include JD keywords naturally. Your experience, education, and projects stay real — only the wording gets optimized.
+                  <span style={{ color:"#E8E4DC",fontWeight:600 }}>Note:</span> The AI rewrites your bullet points to include JD keywords naturally. Your experience stays real — only wording gets optimized.
                 </p>
               </div>
 

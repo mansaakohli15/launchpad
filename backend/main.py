@@ -24,7 +24,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# In-memory document store (lightweight RAG)
+
 doc_store: dict = {}
 
 # ── HEALTH ────────────────────────────────────────────────
@@ -66,40 +66,19 @@ def parse_resume_result(result: str) -> dict:
 async def analyze_resume_endpoint(file: UploadFile = File(...), job_description: str = Form(...)):
     file_bytes = await file.read()
     resume_text = extract_text_from_pdf(file_bytes)
-    prompt = f"""You are an expert resume coach and ATS specialist.
-Analyze this resume against the job description below.
-
-RESUME:
-{resume_text}
-
-JOB DESCRIPTION:
-{job_description}
-
-Give a detailed analysis in EXACTLY this format:
-
-MATCH_SCORE: [number between 0-100]
-
-STRONG_POINTS:
-- [point 1]
-- [point 2]
-- [point 3]
-
-MISSING_KEYWORDS:
-- [keyword 1]
-- [keyword 2]
-- [keyword 3]
-
-WEAK_SECTIONS:
-- [section 1]
-- [section 2]
-
-IMPROVEMENT_SUGGESTIONS:
-- [suggestion 1]
-- [suggestion 2]
-- [suggestion 3]
-
-FINAL_VERDICT:
-[2-3 sentences on whether they should apply and what to fix first]"""
+    prompt = (
+        "You are an expert resume coach and ATS specialist.\n"
+        "Analyze this resume against the job description below.\n\n"
+        "RESUME:\n" + resume_text + "\n\n"
+        "JOB DESCRIPTION:\n" + job_description + "\n\n"
+        "Give a detailed analysis in EXACTLY this format:\n\n"
+        "MATCH_SCORE: [number between 0-100]\n\n"
+        "STRONG_POINTS:\n- [point 1]\n- [point 2]\n- [point 3]\n\n"
+        "MISSING_KEYWORDS:\n- [keyword 1]\n- [keyword 2]\n- [keyword 3]\n\n"
+        "WEAK_SECTIONS:\n- [section 1]\n- [section 2]\n\n"
+        "IMPROVEMENT_SUGGESTIONS:\n- [suggestion 1]\n- [suggestion 2]\n- [suggestion 3]\n\n"
+        "FINAL_VERDICT:\n[2-3 sentences on whether they should apply and what to fix first]"
+    )
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}]
@@ -112,45 +91,27 @@ FINAL_VERDICT:
 async def optimize_resume(file: UploadFile = File(...), job_description: str = Form(...)):
     file_bytes = await file.read()
     resume_text = extract_text_from_pdf(file_bytes)
-    prompt = f"""You are an expert ATS resume writer.
-Rewrite this resume to maximize ATS score for the job description below.
-
-Rules:
-- Keep all real experience, education, and projects — do not invent anything
-- Rewrite bullet points to use keywords from the job description naturally
-- Make bullet points start with strong action verbs
-- Add measurable impact where possible
-- Make it ATS-friendly: no tables, no columns
-
-ORIGINAL RESUME:
-{resume_text}
-
-JOB DESCRIPTION:
-{job_description}
-
-Return ONLY the optimized resume text. No explanations.
-Use this structure:
-
-[FULL NAME]
-[Email] | [Phone] | [LinkedIn/GitHub]
-
-SUMMARY
-[2-3 sentence summary with JD keywords]
-
-SKILLS
-[Comma separated skills]
-
-EXPERIENCE
-[Company] | [Role] | [Dates]
-- [Rewritten bullet]
-
-EDUCATION
-[Degree] | [University] | [Year]
-
-PROJECTS
-[Project Name] | [Tech Stack]
-- [Description]"""
-
+    prompt = (
+        "You are an expert ATS resume writer.\n"
+        "Rewrite this resume to maximize ATS score for the job description below.\n\n"
+        "Rules:\n"
+        "- Keep all real experience, education, and projects\n"
+        "- Rewrite bullet points to use keywords from the job description naturally\n"
+        "- Make bullet points start with strong action verbs\n"
+        "- Add measurable impact where possible\n"
+        "- Make it ATS-friendly: no tables, no columns\n\n"
+        "ORIGINAL RESUME:\n" + resume_text + "\n\n"
+        "JOB DESCRIPTION:\n" + job_description + "\n\n"
+        "Return ONLY the optimized resume text. No explanations.\n"
+        "Use this structure:\n\n"
+        "[FULL NAME]\n"
+        "[Email] | [Phone] | [LinkedIn/GitHub]\n\n"
+        "SUMMARY\n[2-3 sentence summary]\n\n"
+        "SKILLS\n[Comma separated skills]\n\n"
+        "EXPERIENCE\n[Company] | [Role] | [Dates]\n- [Bullet]\n\n"
+        "EDUCATION\n[Degree] | [University] | [Year]\n\n"
+        "PROJECTS\n[Project Name] | [Tech Stack]\n- [Description]"
+    )
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}]
@@ -182,9 +143,9 @@ PROJECTS
                 story.append(Paragraph(line, name_style))
                 is_first = False
             elif line.isupper() and len(line) < 30:
-                story.append(Paragraph(f'<u>{line}</u>', heading))
+                story.append(Paragraph('<u>' + line + '</u>', heading))
             elif line.startswith('- '):
-                story.append(Paragraph(f"• {line[2:]}", normal))
+                story.append(Paragraph('• ' + line[2:], normal))
             else:
                 story.append(Paragraph(line, normal))
 
@@ -229,7 +190,7 @@ def parse_evaluation(evaluation: str) -> dict:
 
 @app.post("/api/interview/question")
 async def get_question(req: QuestionRequest):
-    messages = [{"role": "system", "content": f"You are a strict but fair technical interviewer for a {req.role} position. Ask ONE interview question at a time. Progress from basic to advanced. You are on question {req.question_num} of 5."}]
+    messages = [{"role": "system", "content": "You are a strict but fair technical interviewer for a " + req.role + " position. Ask ONE interview question at a time. Progress from basic to advanced. You are on question " + str(req.question_num) + " of 5."}]
     for m in req.history:
         messages.append({"role": m.role, "content": m.content})
     messages.append({"role": "user", "content": "Ask the next interview question."})
@@ -238,22 +199,16 @@ async def get_question(req: QuestionRequest):
 
 @app.post("/api/interview/evaluate")
 async def evaluate_answer(req: EvaluateRequest):
-    prompt = f"""You are evaluating a candidate's answer in a {req.role} interview.
-Question: {req.question}
-Candidate's Answer: {req.answer}
-
-Evaluate in EXACTLY this format:
-
-SCORE: [number 0-10]
-
-WHAT_WAS_GOOD:
-[1-2 sentences]
-
-WHAT_WAS_MISSING:
-[1-2 sentences]
-
-IDEAL_ANSWER_HINT:
-[2-3 sentences]"""
+    prompt = (
+        "You are evaluating a candidate's answer in a " + req.role + " interview.\n"
+        "Question: " + req.question + "\n"
+        "Candidate's Answer: " + req.answer + "\n\n"
+        "Evaluate in EXACTLY this format:\n\n"
+        "SCORE: [number 0-10]\n\n"
+        "WHAT_WAS_GOOD:\n[1-2 sentences]\n\n"
+        "WHAT_WAS_MISSING:\n[1-2 sentences]\n\n"
+        "IDEAL_ANSWER_HINT:\n[2-3 sentences]"
+    )
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}]
@@ -261,7 +216,7 @@ IDEAL_ANSWER_HINT:
     return parse_evaluation(response.choices[0].message.content)
 
 
-# ── RAG ASSISTANT (lightweight — no torch) ────────────────
+# ── RAG ASSISTANT ─────────────────────────────────────────
 def simple_chunk_text(text: str, chunk_size: int = 400) -> list:
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=40)
     return splitter.split_text(text)
@@ -297,21 +252,16 @@ async def upload_documents(files: List[UploadFile] = File(...), session_id: str 
 async def chat_with_docs(req: ChatRequest):
     if req.session_id not in doc_store or not doc_store[req.session_id]:
         return {"answer": "No documents found. Please upload your study materials first."}
-
     relevant = keyword_search(req.question, doc_store[req.session_id], k=4)
     if not relevant:
         relevant = doc_store[req.session_id][:3]
-
     context = "\n\n".join(relevant)
-    prompt = f"""You are a helpful study assistant. Answer using ONLY the context below from the user's uploaded documents. If the answer isn't in the context, say so.
-
-Context:
-{context}
-
-Question: {req.question}
-
-Answer:"""
-
+    prompt = (
+        "You are a helpful study assistant. Answer using ONLY the context below "
+        "from the user's uploaded documents. If the answer is not in the context, say so.\n\n"
+        "Context:\n" + context + "\n\n"
+        "Question: " + req.question + "\n\nAnswer:"
+    )
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}]
@@ -325,28 +275,28 @@ class RoadmapRequest(BaseModel):
     timeframe: str
     current_skills: str
 
-@app.post("/api/roadmap)
+@app.post("/api/roadmap")
 async def generate_roadmap(req: RoadmapRequest):
-    prompt = f"""You are an expert career coach. Generate a personalized learning roadmap.
-
-Goal: {req.goal}
-Timeframe: {req.timeframe}
-Current Skills: {req.current_skills}
-
-Respond in EXACTLY this JSON format (no extra text, no markdown, just valid JSON):
-{{
-  "weekly_plan": [
-    {{"week": "Week 1-2", "focus": "topic name", "tasks": ["task1", "task2", "task3"]}}
-  ],
-  "must_learn": ["skill1", "skill2", "skill3", "skill4", "skill5"],
-  "resources": [
-    {{"title": "resource name", "type": "Course/Book/Practice", "url": ""}}
-  ],
-  "projects": [
-    {{"title": "project name", "desc": "one line description", "difficulty": "Beginner"}}
-  ],
-  "final_tip": "one powerful motivating tip"
-}}"""
+    prompt = (
+        "You are an expert career coach. Generate a personalized learning roadmap.\n\n"
+        "Goal: " + req.goal + "\n"
+        "Timeframe: " + req.timeframe + "\n"
+        "Current Skills: " + req.current_skills + "\n\n"
+        "Respond in EXACTLY this JSON format (no extra text, no markdown, just valid JSON):\n"
+        '{\n'
+        '  "weekly_plan": [\n'
+        '    {"week": "Week 1-2", "focus": "topic name", "tasks": ["task1", "task2", "task3"]}\n'
+        '  ],\n'
+        '  "must_learn": ["skill1", "skill2", "skill3", "skill4", "skill5"],\n'
+        '  "resources": [\n'
+        '    {"title": "resource name", "type": "Course/Book/Practice", "url": ""}\n'
+        '  ],\n'
+        '  "projects": [\n'
+        '    {"title": "project name", "desc": "one line description", "difficulty": "Beginner"}\n'
+        '  ],\n'
+        '  "final_tip": "one powerful motivating tip"\n'
+        '}'
+    )
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}]

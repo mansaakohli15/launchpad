@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { API_URL } from "../../config";
 
 const ROLES = [
   "Software Engineering Intern",
@@ -10,20 +11,14 @@ const ROLES = [
   "Full Stack Developer",
 ];
 
-type Message = { role: "ai" | "user"; content: string; score?: number };
-type Evaluation = {
-  score: number;
-  what_was_good: string;
-  what_was_missing: string;
-  ideal_answer_hint: string;
-};
-
+type Msg = { role: "ai" | "user"; content: string; score?: number };
+type Evaluation = { score: number; what_was_good: string; what_was_missing: string; ideal_answer_hint: string };
 const TOTAL_QUESTIONS = 5;
 
 export default function InterviewPage() {
   const [phase, setPhase] = useState<"setup" | "interview" | "results">("setup");
   const [role, setRole] = useState(ROLES[0]);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Msg[]>([]);
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [currentQ, setCurrentQ] = useState("");
@@ -37,61 +32,37 @@ export default function InterviewPage() {
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    // Check if browser supports Web Speech API
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       setMicSupported(true);
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = "en-US";
-
       recognition.onresult = (event: any) => {
         let transcript = "";
-        for (let i = 0; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
+        for (let i = 0; i < event.results.length; i++) transcript += event.results[i][0].transcript;
         setAnswer(transcript);
       };
-
-      recognition.onend = () => {
-        setListening(false);
-      };
-
-      recognition.onerror = () => {
-        setListening(false);
-      };
-
+      recognition.onend = () => setListening(false);
+      recognition.onerror = () => setListening(false);
       recognitionRef.current = recognition;
     }
   }, []);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, evaluation]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, evaluation]);
 
   const toggleMic = () => {
     if (!recognitionRef.current) return;
-    if (listening) {
-      recognitionRef.current.stop();
-      setListening(false);
-    } else {
-      setAnswer("");
-      recognitionRef.current.start();
-      setListening(true);
-    }
+    if (listening) { recognitionRef.current.stop(); setListening(false); }
+    else { setAnswer(""); recognitionRef.current.start(); setListening(true); }
   };
 
   const startInterview = async () => {
     setLoading(true);
-    setMessages([]);
-    setScores([]);
-    setHistory([]);
-    setQNum(1);
-    setEvaluation(null);
+    setMessages([]); setScores([]); setHistory([]); setQNum(1); setEvaluation(null);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/interview/question", {
+      const res = await fetch(API_URL + "/api/interview/question", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role, question_num: 1, history: [] }),
@@ -103,21 +74,19 @@ export default function InterviewPage() {
       setPhase("interview");
     } catch {
       alert("Backend not reachable. Make sure FastAPI is running.");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const submitAnswer = async () => {
     if (!answer.trim()) return;
     if (listening) { recognitionRef.current?.stop(); setListening(false); }
     setLoading(true);
-    const userMsg: Message = { role: "user", content: answer };
+    const userMsg: Msg = { role: "user", content: answer };
     setMessages(prev => [...prev, userMsg]);
     setAnswer("");
 
     try {
-      const evalRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/interview/evaluate", {
+      const evalRes = await fetch(API_URL + "/api/interview/evaluate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role, question: currentQ, answer }),
@@ -130,7 +99,7 @@ export default function InterviewPage() {
 
       if (qNum < TOTAL_QUESTIONS) {
         const nextQ = qNum + 1;
-        const qRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/interview/question", {
+        const qRes = await fetch(API_URL + "/api/interview/question", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ role, question_num: nextQ, history: newHistory }),
@@ -146,9 +115,7 @@ export default function InterviewPage() {
       }
     } catch {
       alert("Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
@@ -172,10 +139,8 @@ export default function InterviewPage() {
           0%,80%,100% { transform: translateY(0); opacity:0.4; }
           40% { transform: translateY(-6px); opacity:1; }
         }
-
         .fade { animation: fadeUp 0.5s both; }
         .msg { animation: msgIn 0.35s both; }
-
         .role-btn {
           padding: 10px 18px; background: #0D1210; border: 1px solid #1A2320;
           color: rgba(232,228,220,0.5); font-family: 'Sora', sans-serif; font-size: 13px;
@@ -183,7 +148,6 @@ export default function InterviewPage() {
         }
         .role-btn:hover { border-color: rgba(0,255,148,0.3); color: #E8E4DC; }
         .role-btn.selected { border-color: #00FF94; color: #00FF94; background: rgba(0,255,148,0.06); }
-
         .btn-primary {
           background: #00FF94; color: #080C0A; border: none;
           padding: 14px 32px; font-family: 'Space Mono', monospace;
@@ -192,40 +156,25 @@ export default function InterviewPage() {
         }
         .btn-primary:hover:not(:disabled) { background: #E8E4DC; transform: translateY(-1px); box-shadow: 0 8px 32px rgba(0,255,148,0.2); }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-
         .btn-ghost {
           background: transparent; color: #E8E4DC; border: 1px solid rgba(255,255,255,0.15);
           padding: 14px 32px; font-family: 'Space Mono', monospace; font-size: 13px;
           cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.06em;
         }
         .btn-ghost:hover { border-color: rgba(255,255,255,0.4); }
-
         .mic-btn {
-          position: relative;
-          width: 44px; height: 44px; border-radius: 50%;
-          border: 1px solid #1A2320;
-          background: #0D1210;
+          position: relative; width: 44px; height: 44px; border-radius: 50%;
+          border: 1px solid #1A2320; background: #0D1210;
           cursor: pointer; transition: all 0.2s;
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
         .mic-btn:hover { border-color: rgba(255,107,107,0.5); background: rgba(255,107,107,0.06); }
-        .mic-btn.active {
-          border-color: #FF6B6B;
-          background: rgba(255,107,107,0.12);
-          animation: pulse 1.5s ease-in-out infinite;
-        }
-        .mic-btn .ripple {
-          position: absolute; inset: -1px; border-radius: 50%;
-          border: 1px solid #FF6B6B;
-          animation: ripple 1.5s ease-out infinite;
-        }
-
+        .mic-btn.active { border-color: #FF6B6B; background: rgba(255,107,107,0.12); animation: pulse 1.5s ease-in-out infinite; }
+        .mic-btn .ripple { position: absolute; inset: -1px; border-radius: 50%; border: 1px solid #FF6B6B; animation: ripple 1.5s ease-out infinite; }
         .ai-bubble {
           background: #0D1210; border: 1px solid #1A2320;
           padding: 18px 20px; border-radius: 2px 12px 12px 12px;
-          font-size: 15px; line-height: 1.75; color: rgba(232,228,220,0.9);
-          max-width: 85%;
+          font-size: 15px; line-height: 1.75; color: rgba(232,228,220,0.9); max-width: 85%;
         }
         .user-bubble {
           background: rgba(0,255,148,0.08); border: 1px solid rgba(0,255,148,0.2);
@@ -233,10 +182,7 @@ export default function InterviewPage() {
           font-size: 15px; line-height: 1.75; color: rgba(232,228,220,0.85);
           max-width: 85%; margin-left: auto;
         }
-        .eval-card {
-          background: #0A0F0D; border: 1px solid #1A2320;
-          padding: 20px; margin: 8px 0; border-radius: 2px;
-        }
+        .eval-card { background: #0A0F0D; border: 1px solid #1A2320; padding: 20px; margin: 8px 0; border-radius: 2px; }
         textarea {
           flex: 1; background: #0D1210; border: 1px solid #1A2320;
           color: #E8E4DC; padding: 14px 16px; font-family: 'Sora', sans-serif;
@@ -245,14 +191,12 @@ export default function InterviewPage() {
         }
         textarea:focus { border-color: rgba(0,255,148,0.4); }
         textarea::placeholder { color: rgba(232,228,220,0.25); }
-
         .dot { width:7px; height:7px; border-radius:50%; background:#00FF94; }
         .dot:nth-child(1) { animation: dotBounce 1.2s 0s infinite; }
         .dot:nth-child(2) { animation: dotBounce 1.2s 0.2s infinite; }
         .dot:nth-child(3) { animation: dotBounce 1.2s 0.4s infinite; }
       `}</style>
 
-      {/* SETUP */}
       {phase === "setup" && (
         <div className="fade">
           <div style={{ marginBottom: 32 }}>
@@ -270,20 +214,16 @@ export default function InterviewPage() {
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {ROLES.map(r => (
-                <button key={r} className={`role-btn ${role === r ? "selected" : ""}`} onClick={() => setRole(r)}>
-                  {r}
-                </button>
+                <button key={r} className={`role-btn ${role === r ? "selected" : ""}`} onClick={() => setRole(r)}>{r}</button>
               ))}
             </div>
           </div>
 
-          {/* Mic support note */}
           {micSupported && (
             <div style={{ background: "rgba(255,107,107,0.04)", border: "1px solid rgba(255,107,107,0.15)", padding: "14px 18px", marginBottom: 2, display: "flex", gap: 10, alignItems: "center" }}>
               <span style={{ fontSize: 16 }}>🎤</span>
               <p style={{ fontSize: 13, color: "rgba(232,228,220,0.55)", lineHeight: 1.5 }}>
-                <span style={{ color: "#E8E4DC", fontWeight: 600 }}>Voice input available.</span>{" "}
-                Click the mic button while answering to speak your response.
+                <span style={{ color: "#E8E4DC", fontWeight: 600 }}>Voice input available.</span> Click the mic button while answering to speak your response.
               </p>
             </div>
           )}
@@ -291,8 +231,7 @@ export default function InterviewPage() {
           <div style={{ background: "rgba(255,209,102,0.04)", border: "1px solid rgba(255,209,102,0.15)", padding: "14px 18px", marginBottom: 2, display: "flex", gap: 10, alignItems: "center" }}>
             <span style={{ fontSize: 16 }}>⚡</span>
             <p style={{ fontSize: 13, color: "rgba(232,228,220,0.55)", lineHeight: 1.5 }}>
-              <span style={{ color: "#E8E4DC", fontWeight: 600 }}>Tip:</span>{" "}
-              Answer as if it's a real interview. The AI adapts difficulty and scores communication quality too.
+              <span style={{ color: "#E8E4DC", fontWeight: 600 }}>Tip:</span> Answer as if it's a real interview. The AI adapts difficulty and scores communication quality too.
             </p>
           </div>
 
@@ -304,29 +243,18 @@ export default function InterviewPage() {
         </div>
       )}
 
-      {/* INTERVIEW */}
       {phase === "interview" && (
         <div className="fade">
-          {/* Progress */}
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: "rgba(232,228,220,0.4)", letterSpacing: "0.08em" }}>
-                {role.toUpperCase()}
-              </div>
-              <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: "#00FF94" }}>
-                {Math.min(qNum, TOTAL_QUESTIONS)} / {TOTAL_QUESTIONS}
-              </div>
+              <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: "rgba(232,228,220,0.4)", letterSpacing: "0.08em" }}>{role.toUpperCase()}</div>
+              <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: "#00FF94" }}>{Math.min(qNum, TOTAL_QUESTIONS)} / {TOTAL_QUESTIONS}</div>
             </div>
             <div style={{ height: 3, background: "#1A2320", borderRadius: 2 }}>
-              <div style={{
-                height: "100%", background: "#00FF94", borderRadius: 2,
-                width: `${(Math.min(qNum, TOTAL_QUESTIONS) / TOTAL_QUESTIONS) * 100}%`,
-                transition: "width 0.5s ease",
-              }} />
+              <div style={{ height: "100%", background: "#00FF94", borderRadius: 2, width: `${(Math.min(qNum, TOTAL_QUESTIONS) / TOTAL_QUESTIONS) * 100}%`, transition: "width 0.5s ease" }} />
             </div>
           </div>
 
-          {/* Chat */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16, minHeight: 200 }}>
             {messages.map((m, i) => (
               <div key={i} className="msg">
@@ -353,9 +281,7 @@ export default function InterviewPage() {
             {evaluation && (
               <div className="msg eval-card">
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 22, fontWeight: 700, color: evaluation.score >= 7 ? "#00FF94" : evaluation.score >= 5 ? "#FFD166" : "#FF6B6B" }}>
-                    {evaluation.score}/10
-                  </div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 22, fontWeight: 700, color: evaluation.score >= 7 ? "#00FF94" : evaluation.score >= 5 ? "#FFD166" : "#FF6B6B" }}>{evaluation.score}/10</div>
                   <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "rgba(232,228,220,0.35)", letterSpacing: "0.1em", textTransform: "uppercase" }}>Answer Score</div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
@@ -386,7 +312,6 @@ export default function InterviewPage() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Input area with mic */}
           {!loading && (
             <div>
               <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
@@ -397,21 +322,11 @@ export default function InterviewPage() {
                   onKeyDown={e => { if (e.key === "Enter" && e.ctrlKey) submitAnswer(); }}
                   style={{ border: listening ? "1px solid rgba(255,107,107,0.5)" : undefined }}
                 />
-
-                {/* Mic button */}
                 {micSupported && (
-                  <button
-                    className={`mic-btn ${listening ? "active" : ""}`}
-                    onClick={toggleMic}
-                    title={listening ? "Stop recording" : "Start voice input"}
-                    style={{ alignSelf: "flex-end", marginBottom: 0 }}
-                  >
+                  <button className={`mic-btn ${listening ? "active" : ""}`} onClick={toggleMic} title={listening ? "Stop recording" : "Start voice input"} style={{ alignSelf: "flex-end", marginBottom: 0 }}>
                     {listening && <span className="ripple" />}
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <rect x="9" y="2" width="6" height="12" rx="3"
-                        fill={listening ? "#FF6B6B" : "rgba(232,228,220,0.5)"}
-                        style={{ transition: "fill 0.2s" }}
-                      />
+                      <rect x="9" y="2" width="6" height="12" rx="3" fill={listening ? "#FF6B6B" : "rgba(232,228,220,0.5)"} style={{ transition: "fill 0.2s" }} />
                       <path d="M5 10a7 7 0 0 0 14 0" stroke={listening ? "#FF6B6B" : "rgba(232,228,220,0.5)"} strokeWidth="2" strokeLinecap="round" style={{ transition: "stroke 0.2s" }} />
                       <line x1="12" y1="17" x2="12" y2="21" stroke={listening ? "#FF6B6B" : "rgba(232,228,220,0.5)"} strokeWidth="2" strokeLinecap="round" style={{ transition: "stroke 0.2s" }} />
                       <line x1="9" y1="21" x2="15" y2="21" stroke={listening ? "#FF6B6B" : "rgba(232,228,220,0.5)"} strokeWidth="2" strokeLinecap="round" style={{ transition: "stroke 0.2s" }} />
@@ -420,76 +335,54 @@ export default function InterviewPage() {
                 )}
               </div>
 
-              {/* Live transcript indicator */}
               {listening && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
                   <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#FF6B6B", animation: "pulse 1s infinite" }} />
-                  <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#FF6B6B", letterSpacing: "0.08em" }}>
-                    RECORDING — CLICK MIC TO STOP
-                  </span>
+                  <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#FF6B6B", letterSpacing: "0.08em" }}>RECORDING — CLICK MIC TO STOP</span>
                 </div>
               )}
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "rgba(232,228,220,0.2)", letterSpacing: "0.06em" }}>
-                  CTRL+ENTER TO SUBMIT
-                </span>
-                <button className="btn-primary" onClick={submitAnswer} disabled={!answer.trim() || loading} style={{ padding: "12px 28px" }}>
-                  Submit Answer →
-                </button>
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "rgba(232,228,220,0.2)", letterSpacing: "0.06em" }}>CTRL+ENTER TO SUBMIT</span>
+                <button className="btn-primary" onClick={submitAnswer} disabled={!answer.trim() || loading} style={{ padding: "12px 28px" }}>Submit Answer →</button>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* RESULTS */}
       {phase === "results" && (
         <div className="fade">
           <div style={{ textAlign: "center", padding: "40px 0", marginBottom: 32 }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🎯</div>
-            <h1 style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 8 }}>
-              Interview Complete
-            </h1>
+            <h1 style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 8 }}>Interview Complete</h1>
             <p style={{ fontSize: 14, color: "rgba(232,228,220,0.5)" }}>Here's how you performed across all 5 questions.</p>
           </div>
 
           <div style={{ background: "#0D1210", border: `1px solid ${avgColor}33`, padding: "32px", textAlign: "center", marginBottom: 2 }}>
-            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 56, fontWeight: 700, color: avgColor, lineHeight: 1 }}>
-              {avg.toFixed(1)}
-            </div>
-            <div style={{ fontSize: 14, color: "rgba(232,228,220,0.45)", marginTop: 8, fontFamily: "'Space Mono', monospace", letterSpacing: "0.06em" }}>
-              AVERAGE SCORE / 10
-            </div>
+            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 56, fontWeight: 700, color: avgColor, lineHeight: 1 }}>{avg.toFixed(1)}</div>
+            <div style={{ fontSize: 14, color: "rgba(232,228,220,0.45)", marginTop: 8, fontFamily: "'Space Mono', monospace", letterSpacing: "0.06em" }}>AVERAGE SCORE / 10</div>
             <div style={{ marginTop: 12, fontSize: 14, color: avgColor }}>
               {avg >= 7 ? "Strong performance 🔥" : avg >= 5 ? "Good effort, room to improve 📈" : "Keep practicing, you'll get there 💪"}
             </div>
           </div>
 
           <div style={{ background: "#0D1210", border: "1px solid #1A2320", padding: "24px", marginBottom: 2 }}>
-            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(232,228,220,0.35)", marginBottom: 16 }}>
-              Question Breakdown
-            </div>
+            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(232,228,220,0.35)", marginBottom: 16 }}>Question Breakdown</div>
             {scores.map((s, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
                 <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: "rgba(232,228,220,0.4)", minWidth: 24 }}>Q{i + 1}</span>
                 <div style={{ flex: 1, height: 6, background: "#1A2320", borderRadius: 3 }}>
                   <div style={{ height: "100%", borderRadius: 3, background: s >= 7 ? "#00FF94" : s >= 5 ? "#FFD166" : "#FF6B6B", width: `${s * 10}%`, transition: "width 0.8s ease" }} />
                 </div>
-                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 12, color: s >= 7 ? "#00FF94" : s >= 5 ? "#FFD166" : "#FF6B6B", minWidth: 32, textAlign: "right" }}>
-                  {s}/10
-                </span>
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 12, color: s >= 7 ? "#00FF94" : s >= 5 ? "#FFD166" : "#FF6B6B", minWidth: 32, textAlign: "right" }}>{s}/10</span>
               </div>
             ))}
           </div>
 
           <div style={{ display: "flex", gap: 2, marginTop: 2 }}>
-            <button className="btn-primary" style={{ flex: 1 }} onClick={() => { setPhase("setup"); setMessages([]); setScores([]); }}>
-              Try Another Interview →
-            </button>
-            <button className="btn-ghost" style={{ flex: 1 }} onClick={() => window.location.href = "/dashboard/resume"}>
-              Fix Resume Gaps
-            </button>
+            <button className="btn-primary" style={{ flex: 1 }} onClick={() => { setPhase("setup"); setMessages([]); setScores([]); }}>Try Another Interview →</button>
+            <button className="btn-ghost" style={{ flex: 1 }} onClick={() => window.location.href = "/dashboard/resume"}>Fix Resume Gaps</button>
           </div>
         </div>
       )}

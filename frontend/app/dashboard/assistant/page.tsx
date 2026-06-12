@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { API_URL } from "../../config";
 
 type Message = { role: "user" | "ai"; content: string };
 
@@ -34,13 +35,13 @@ export default function AssistantPage() {
       const formData = new FormData();
       files.forEach(f => formData.append("files", f));
       formData.append("session_id", SESSION_ID);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/assistant/upload", {
+      const res = await fetch(API_URL + "/api/assistant/upload", {
         method: "POST", body: formData,
       });
       const data = await res.json();
       setDocsInfo({ files: data.files, chunks: data.chunks });
       setPhase("chat");
-      setMessages([{ role: "ai", content: `I've processed ${data.files} document${data.files > 1 ? "s" : ""} (${data.chunks} chunks). Ask me anything from your materials!` }]);
+      setMessages([{ role: "ai", content: "I've processed " + data.files + " document(s) (" + data.chunks + " chunks). Ask me anything from your materials!" }]);
     } catch {
       alert("Upload failed. Make sure backend is running.");
     } finally {
@@ -55,7 +56,7 @@ export default function AssistantPage() {
     setMessages(prev => [...prev, { role: "user", content: q }]);
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/assistant/chat", {
+      const res = await fetch(API_URL + "/api/assistant/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: SESSION_ID, question: q }),
@@ -197,14 +198,13 @@ export default function AssistantPage() {
           </div>
 
           <button className="btn-primary" onClick={processDocuments} disabled={uploading || !files.length}>
-            {uploading ? "Processing Documents..." : `Process ${files.length || 0} Document${files.length !== 1 ? "s" : ""} →`}
+            {uploading ? "Processing Documents..." : "Process " + (files.length || 0) + " Document" + (files.length !== 1 ? "s" : "") + " →"}
           </button>
         </div>
       )}
 
       {phase === "chat" && (
         <div className="fade">
-          {/* Docs info bar */}
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
             background: "rgba(255,107,107,0.06)", border: "1px solid rgba(255,107,107,0.15)",
@@ -222,7 +222,6 @@ export default function AssistantPage() {
             </button>
           </div>
 
-          {/* Messages */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16, minHeight: 300 }}>
             {messages.map((m, i) => (
               <div key={i} className="msg">
@@ -249,7 +248,6 @@ export default function AssistantPage() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Suggested questions */}
           {messages.length === 1 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
               {["Explain this topic simply", "Give me 5 interview questions on this", "What are the key concepts I should know?", "Summarize the most important points"].map(q => (
@@ -264,7 +262,6 @@ export default function AssistantPage() {
             </div>
           )}
 
-          {/* Input */}
           <div style={{ display: "flex", gap: 8 }}>
             <input
               className="chat-input"
