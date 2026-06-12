@@ -21,20 +21,6 @@
 > Resume Analyzer · Mock Interview · RAG Assistant · Learning Roadmap
 > <img width="1918" height="1031" alt="image" src="https://github.com/user-attachments/assets/86b9539a-bda2-4401-9c17-c4de80e88f75" />
 
-Resume Analyzer
-<img width="1917" height="1017" alt="image" src="https://github.com/user-attachments/assets/e117c5ba-5b0a-4812-8735-c3bbacf19303" />
-
-Mock Interview
-<img width="1918" height="1012" alt="image" src="https://github.com/user-attachments/assets/d6593222-375c-4829-8092-dd02b9845337" />
-
-RAG Assistant
-<img width="1918" height="1022" alt="image" src="https://github.com/user-attachments/assets/880acc4a-84c7-4ec5-8612-296b0ab56045" />
-
-Learning Roadmap
-<img width="1918" height="1018" alt="image" src="https://github.com/user-attachments/assets/8ad2e040-4e39-4f1d-85de-98177b7a2211" />
-
-
-
 ---
 ## 🌐 Live Demo
 
@@ -158,14 +144,25 @@ Upload your resume PDF and paste any job description. Get an ATS match score out
 ### AI Resume Optimizer
 The AI rewrites your resume bullet points to include JD keywords naturally — without inventing experience. Downloads as a clean, ATS-friendly PDF.
 
+<img width="1917" height="1017" alt="image" src="https://github.com/user-attachments/assets/e117c5ba-5b0a-4812-8735-c3bbacf19303" />
+
+
 ### Mock Interview Engine
 Choose your target role (SWE, ML, DSA, HR, Frontend, Backend). Answer 5 adaptive questions with voice input support. Get scored on every answer with feedback on what was good, what was missing, and ideal answer hints.
+
+<img width="1918" height="1012" alt="image" src="https://github.com/user-attachments/assets/d6593222-375c-4829-8092-dd02b9845337" />
 
 ### RAG Knowledge Assistant
 Upload multiple PDFs — DBMS notes, OS concepts, interview prep materials. Ask questions in plain English. The system retrieves relevant chunks using semantic search and answers from your own materials.
 
+<img width="1918" height="1022" alt="image" src="https://github.com/user-attachments/assets/880acc4a-84c7-4ec5-8612-296b0ab56045" />
+
 ### Learning Roadmap
 Enter your goal, timeline, and current skills. Get a week-by-week plan with an interactive SVG road animation, must-learn skills, projects to build, and curated resources.
+
+
+<img width="1918" height="1018" alt="image" src="https://github.com/user-attachments/assets/8ad2e040-4e39-4f1d-85de-98177b7a2211" />
+
 
 ---
 
