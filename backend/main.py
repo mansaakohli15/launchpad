@@ -17,7 +17,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "https://launchpad-2rnq8elae-mansaa-kohlis-projects.vercel.app",
+        "https://launchpad-smoky-ten.vercel.app",
         "https://launchpad-production-2461.up.railway.app",
         os.getenv("FRONTEND_URL", ""),
     ],
