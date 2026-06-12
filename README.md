@@ -49,7 +49,7 @@ Most students struggle with weak resumes, no interview guidance, scattered prepa
 | RAG Pipeline | LangChain + ChromaDB + HuggingFace Embeddings |
 | PDF Parsing | PyMuPDF |
 | PDF Generation | ReportLab |
-| Deployment | Vercel (frontend) + Render (backend) |
+| Deployment | Vercel (frontend) + Railway (backend) |
 
 ---
 
