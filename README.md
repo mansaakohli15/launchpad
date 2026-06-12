@@ -10,7 +10,7 @@
 [![LangChain](https://img.shields.io/badge/LangChain-RAG-green?style=flat-square)](https://langchain.com)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-[Live Demo](https://launchpad-ai.vercel.app) · [Report Bug](https://github.com/YOUR_USERNAME/launchpad/issues) · [Request Feature](https://github.com/YOUR_USERNAME/launchpad/issues)
+[Live Demo](https://launchpad-smoky-ten.vercel.app) · [Report Bug](https://github.com/mansaakohli15/launchpad/issues) · [Request Feature](https://github.com/mansaakohli15/launchpad/issues)
 
 </div>
 
@@ -21,6 +21,11 @@
 > Resume Analyzer · Mock Interview · RAG Assistant · Learning Roadmap
 
 ---
+## 🌐 Live Demo
+
+- **Frontend:** https://launchpad-smoky-ten.vercel.app
+- **Backend API:** https://launchpad-production-2461.up.railway.app
+
 
 ## 🎯 What is Launchpad?
 
@@ -157,9 +162,9 @@ cd frontend
 npx vercel --prod
 ```
 
-### Backend → Render
+### Backend → Railway
 1. Push to GitHub
-2. New Web Service on [render.com](https://render.com)
+2. New Web Service on [railway.com](https://railway.com)
 3. Build command: `pip install -r requirements.txt`
 4. Start command: `uvicorn main:app --host 0.0.0.0 --port 10000`
 5. Add environment variable: `GROQ_API_KEY`
