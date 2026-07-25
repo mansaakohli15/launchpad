@@ -18,7 +18,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "https://launchpad-smoky-ten.vercel.app",
-        "https://launchpad-production-2461.up.railway.app",
+        "https://launchpad-1-czci.onrender.com",
         os.getenv("FRONTEND_URL", ""),
     ],
     allow_methods=["*"],
